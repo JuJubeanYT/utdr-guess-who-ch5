@@ -62,6 +62,7 @@ class SceneSwitchWatcher {
   }
 }
 
+
 let leftMouseHeld = false;
 document.addEventListener("mousedown", (e) => {
   if (e.button === 0) {
@@ -696,6 +697,7 @@ async function startGame() {
   // If the game is already loading, exit to avoid doubling up
   if (gameLoading)
     return;
+
   gameLoading = true;
   numImagesToLoadTotal = 0;
   updateLoadingPercent();
@@ -1537,19 +1539,22 @@ function flipGuess(e) {
  */
 let currentSound = null;
 function handleConfigPress(frameEl, config) {
-  if (!config?.sounds?.length) return;
-  let charsetPath = frameEl.getAttribute("charsetPath")
+  if (!leftMouseHeld) {
+    if (config?.sounds?.length) {;
+      let charsetPath = frameEl.getAttribute("charsetPath")
 
-  const soundPath =
-    config.sounds[Math.floor(Math.random() * config.sounds.length)];
+      const soundPath =
+        config.sounds[Math.floor(Math.random() * config.sounds.length)];
 
-  if (currentSound) {
-    currentSound.pause();
-    currentSound.currentTime = 0;
+      if (currentSound) {
+        currentSound.pause();
+        currentSound.currentTime = 0;
+      }
+
+      currentSound = new Audio(charsetPath + "/" + soundPath);
+      currentSound.play().catch(console.error);
+    }
   }
-
-  currentSound = new Audio(charsetPath + "/" + soundPath);
-  currentSound.play().catch(console.error);
 }
 /**
  * Flips a card between active and inactive states
@@ -2272,8 +2277,11 @@ CREDITS_BACK_BUTTON.addEventListener("click", switchScene);
 const creditsSceneSwitchWatcher = new SceneSwitchWatcher(CREDITS_SCENE, initCreditsScene, exitCreditsScene);
 
 
+
 // Final setup
 // ===========
+
+
 window.onload = function () {
   PREPICKDIAPLAY.style.setProperty("display", "none", "important");
   lSceneStack.push(MENU_SCENE);
