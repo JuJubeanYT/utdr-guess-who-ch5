@@ -688,6 +688,7 @@ function SelectCharacter(name) {
   YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
   loadGuessIcons();
   GUESSES_DISPLAY.style.removeProperty("display");
+  PREPICKDIAPLAY.style.setProperty("display", "none", "important");
   YOUARETEXT.innerText = YOUARETEXTDEFAULT
   gameStarted = true
 }
@@ -695,14 +696,17 @@ async function startGame() {
   // If the game is already loading, exit to avoid doubling up
   if (gameLoading)
     return;
-  gameStarted = false;
   gameLoading = true;
   numImagesToLoadTotal = 0;
   updateLoadingPercent();
+   YOUR_CHAR_IMG.setAttribute("src", "");
+   YOUR_CHAR_IMG.setAttribute("alt", "");
   GUESSES_DISPLAY.style.setProperty("display", "none", "important");
+  PREPICKDIAPLAY.style.removeProperty("display");
+  YOUR_CHAR_NAME.innerText = "";
   YOUARETEXT.innerText = "Select a Character"
   document.querySelectorAll(".game-loading-message").forEach(el => el.classList.remove("hidden"));
-
+  gameStarted = false;
 
   // Load the selected character set
   const setDirName = MENU_CHARSET_SELECT.value;
@@ -2076,6 +2080,7 @@ const SETTINGS_SCENE_HEADER = document.getElementById("settings-scene");
 const SETTINGS_NAME_LINK = document.getElementById("settings-edit-name");
 const SETTINGS_GUESS_LABEL = document.getElementById("num-guesses-label");
 const GUESSES_DISPLAY = document.getElementById("guesses-display")
+const PREPICKDIAPLAY = document.getElementById("prePickDisplay")
 const YOUARETEXT = document.getElementById("above-name-text")
 const YOUARETEXTDEFAULT = YOUARETEXT.innerText
 const SETTINGS_GUESS_SELECT = document.getElementById("num-guesses-select");
@@ -2087,6 +2092,7 @@ const SETTINGS_REMEMBER_BOX = document.getElementById("remember-settings");
 const SETTINGS_RESTORE_DEFAULT_BUTTON = document.getElementById("settings-restore-default");
 const SETTINGS_RESTORE_INIT_BUTTON = document.getElementById("settings-restore-init");
 const SETTINGS_BACK_BUTTON = document.getElementById("settings-back");
+const RANDOMBUTTON = document.getElementById("random-button")
 
 const L_SETTINGS_OPTIONS = [SETTINGS_NAME_LINK, SETTINGS_GUESS_LABEL, SETTINGS_SCALE_LABEL, SETTINGS_REMEMBER_BOX,
   SETTINGS_RESTORE_DEFAULT_BUTTON, SETTINGS_RESTORE_INIT_BUTTON, SETTINGS_BACK_BUTTON];
@@ -2096,6 +2102,12 @@ const SETTINGS_EXAMPLE_CARD = document.getElementById("example-character-card");
 
 // Functions
 // ---------
+
+RANDOMBUTTON.addEventListener("click",function(e){
+  if (!gameStarted) {
+    SelectCharacter(lCharInfo[Math.floor(Math.random() * getNumChars())]?.name ?? "")
+  }
+})
 
 function initSettingsScene() {
   SETTINGS_NAME_LINK.focus({ focusVisible: true });
@@ -2263,6 +2275,7 @@ const creditsSceneSwitchWatcher = new SceneSwitchWatcher(CREDITS_SCENE, initCred
 // Final setup
 // ===========
 window.onload = function () {
+  PREPICKDIAPLAY.style.setProperty("display", "none", "important");
   lSceneStack.push(MENU_SCENE);
 
   // Get the saved name, if any. If it's found in the cookie, set the "remember" boxes to be checked
