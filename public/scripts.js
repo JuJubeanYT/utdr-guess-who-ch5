@@ -63,10 +63,10 @@ class SceneSwitchWatcher {
 }
 
 let leftMouseHeld = false;
-
 document.addEventListener("mousedown", (e) => {
-  if (e.button === 0)
+  if (e.button === 0) {
     leftMouseHeld = true;
+  }
 });
 
 document.addEventListener("mouseup", (e) => {
@@ -645,7 +645,7 @@ function updateLoadingPercent() {
 
 function loadGuessIcons() {
 
-  const targetNumGuessIcons = sessionStorage.getItem("numGuesses");
+  const targetNumGuessIcons = sessionStorage.getItem("numGuesses") || 3;
   lGuessIcons = document.querySelectorAll(".guess-icon");
 
   // Check if we have the correct number of guesses, need to add some, or need to remove some
@@ -1428,8 +1428,14 @@ async function loadCharacterSet(setDirName) {
         });
     }
     frameEl.setAttribute("charsetPath", charsetPath + "/" + (charInfo.fullname || ""))
-    frameEl.addEventListener("click", flipCard);
+    let canClick = true
+    frameEl.addEventListener("click", (e) => { // just in case mobile doesn't have mousedown
+      if (canClick) {
+         flipCard(e);
+      }
+    });
     frameEl.addEventListener("dblclick", markCard);
+
     frameEl.addEventListener("mouseenter", (e) => {
       if (leftMouseHeld) {
         flipCard(e);
@@ -1438,6 +1444,12 @@ async function loadCharacterSet(setDirName) {
     frameEl.addEventListener("mousedown", (e) => {
       if (e.button == 1 || e.buttons == 4)
         toggleInspectCard(e);
+      if (e.button == 0) {
+        flipCard(e); 
+        leftMouseHeld = true;
+        canClick = false;
+        e.stopPropagation() 
+      }
     });
     frameEl.addEventListener("contextmenu", markCard, false);
     frameEl.addEventListener("wheel", (e) => {
