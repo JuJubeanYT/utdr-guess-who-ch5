@@ -86,7 +86,6 @@ const INSTRUCTIONS_SCENE = document.getElementById("instructions-scene");
 const CONTROLS_SCENE = document.getElementById("controls-scene");
 const SETTINGS_SCENE = document.getElementById("settings-scene");
 const CREDITS_SCENE = document.getElementById("credits-scene");
-let charConfigs = []
 
 // Other constants
 const SCREEN_SIZE_BREAKPOINT = 800;
@@ -100,6 +99,9 @@ const lSceneStack = []
 // State locks
 let sceneSwitching = false;
 let gameLoading = false;
+let gameStarted = false
+let charConfigs = []
+let charNameToID = []
 
 // Initial setting values
 const initSettings = {};
@@ -675,17 +677,32 @@ function loadGuessIcons() {
   lGuessIcons.forEach((el) => el.addEventListener("click", flipGuess));
 }
 
+function SelectCharacter(name) {
+  if (gameStarted) return;
+  yourCharIndex = charNameToID[name];
+  const yourCharInfo = lCharInfo[yourCharIndex];
+  if (!yourCharInfo) return;
+  YOUR_CHAR_NAME.textContent = yourCharInfo.name;
+  YOUR_CHAR_IMG_FRAME.value = yourCharInfo.name;
+  YOUR_CHAR_IMG.setAttribute("alt", yourCharInfo.name);
+  YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
+  loadGuessIcons();
+  GUESSES_DISPLAY.style.removeProperty("display");
+  YOUARETEXT.innerText = YOUARETEXTDEFAULT
+  gameStarted = true
+}
 async function startGame() {
   // If the game is already loading, exit to avoid doubling up
   if (gameLoading)
     return;
+  gameStarted = false;
   gameLoading = true;
   numImagesToLoadTotal = 0;
   updateLoadingPercent();
-
+  GUESSES_DISPLAY.style.setProperty("display", "none", "important");
+  YOUARETEXT.innerText = "Select a Character"
   document.querySelectorAll(".game-loading-message").forEach(el => el.classList.remove("hidden"));
 
-  loadGuessIcons();
 
   // Load the selected character set
   const setDirName = MENU_CHARSET_SELECT.value;
@@ -714,14 +731,16 @@ async function startGame() {
   updateNumChars();
 
   // Randomly determine the player's character and set it up
-  yourCharIndex = Math.floor(Math.random() * getNumChars());
-  const yourCharInfo = lCharInfo[yourCharIndex];
-  YOUR_CHAR_NAME.textContent = yourCharInfo.name;
-  YOUR_CHAR_IMG_FRAME.value = yourCharInfo.name;
-  YOUR_CHAR_IMG.setAttribute("alt", yourCharInfo.name);
+  
+  //yourCharIndex = Math.floor(Math.random() * getNumChars());
+  //const yourCharInfo = lCharInfo[yourCharIndex];
+  //YOUR_CHAR_NAME.textContent = yourCharInfo.name;
+  //YOUR_CHAR_IMG_FRAME.value = yourCharInfo.name;
+  //YOUR_CHAR_IMG.setAttribute("alt", yourCharInfo.name);
 
   // Set the image to be scaled based on its natural size
-  ++numImagesLoading;
+  
+  /*++numImagesLoading;
   ++numImagesToLoadTotal;
   YOUR_CHAR_IMG.onload = () => {
     --numImagesLoading;
@@ -733,10 +752,11 @@ async function startGame() {
     // If it can't be loaded, leave it blank - better than hanging forever
     --numImagesLoading;
     updateLoadingPercent();
-  }
+  }*/
 
   // Start loading the image
-  YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
+  
+  //YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
 
   // Wait until all images are loaded before we switch to the game scene
   const interval = setInterval(() => {
@@ -1382,7 +1402,8 @@ async function loadCharacterSet(setDirName) {
   lAllChars.forEach((charInfo) => {
     if (charInfo === undefined)
       return;
-    lCharInfo.push(charInfo);
+
+    charNameToID[charInfo.name] = lCharInfo.push(charInfo)-1;
     const newCard = document.importNode(CHARACTER_CARD_TEMPLATE.content, true).querySelector(".character-card");
 
     newCard.querySelector(".character-img-frame").value = charInfo.name;
@@ -1414,6 +1435,7 @@ async function loadCharacterSet(setDirName) {
     inspectImgEl.setAttribute("src", charsetPath + "/" + charInfo.imgName);
 
     const frameEl = newCard.querySelector(".character-img-frame");
+    frameEl.setAttribute("charName", charInfo.name)
     let configDumped = null;
     if (charInfo.config) {
       configDumped = loadJSON(charsetPath + "/" + charInfo.config)
@@ -1530,7 +1552,6 @@ function handleConfigPress(frameEl, config) {
  * @param {Event} e 
  */
 function flipCard(e) {
-
   // Don't flip if we're in lookup mode
   if (lookupModeEnabled())
     return;
@@ -1538,6 +1559,11 @@ function flipCard(e) {
   let frameEl;
   if (!(frameEl = e.currentTarget || e.target))
     frameEl = e;
+
+  if (!gameStarted) {
+    e.preventDefault();
+    return SelectCharacter(frameEl.getAttribute("charName"))
+  }
   const cardClassList = frameEl.closest(".character-card").classList;
 
   let config = charConfigs[frameEl.getAttribute("charsetPath")]
@@ -2045,6 +2071,9 @@ const SETTINGS_SCENE_HEADER = document.getElementById("settings-scene");
 
 const SETTINGS_NAME_LINK = document.getElementById("settings-edit-name");
 const SETTINGS_GUESS_LABEL = document.getElementById("num-guesses-label");
+const GUESSES_DISPLAY = document.getElementById("guesses-display")
+const YOUARETEXT = document.getElementById("above-name-text")
+const YOUARETEXTDEFAULT = YOUARETEXT.innerText
 const SETTINGS_GUESS_SELECT = document.getElementById("num-guesses-select");
 const SETTINGS_SCALE_LABEL = document.getElementById("card-scale-label");
 const SETTINGS_SCALE_SELECT = document.getElementById("card-scale-select");
