@@ -62,11 +62,12 @@ class SceneSwitchWatcher {
   }
 }
 
-let leftMouseHeld = false;
 
+let leftMouseHeld = false;
 document.addEventListener("mousedown", (e) => {
-  if (e.button === 0)
+  if (e.button === 0) {
     leftMouseHeld = true;
+  }
 });
 
 document.addEventListener("mouseup", (e) => {
@@ -86,7 +87,6 @@ const INSTRUCTIONS_SCENE = document.getElementById("instructions-scene");
 const CONTROLS_SCENE = document.getElementById("controls-scene");
 const SETTINGS_SCENE = document.getElementById("settings-scene");
 const CREDITS_SCENE = document.getElementById("credits-scene");
-let charConfigs = []
 
 // Other constants
 const SCREEN_SIZE_BREAKPOINT = 800;
@@ -100,6 +100,9 @@ const lSceneStack = []
 // State locks
 let sceneSwitching = false;
 let gameLoading = false;
+let gameStarted = false
+let charConfigs = []
+let charNameToID = []
 
 // Initial setting values
 const initSettings = {};
@@ -645,7 +648,7 @@ function updateLoadingPercent() {
 
 function loadGuessIcons() {
 
-  const targetNumGuessIcons = sessionStorage.getItem("numGuesses");
+  const targetNumGuessIcons = sessionStorage.getItem("numGuesses") || 3;
   lGuessIcons = document.querySelectorAll(".guess-icon");
 
   // Check if we have the correct number of guesses, need to add some, or need to remove some
@@ -675,17 +678,37 @@ function loadGuessIcons() {
   lGuessIcons.forEach((el) => el.addEventListener("click", flipGuess));
 }
 
+function SelectCharacter(name) {
+  if (gameStarted) return;
+  yourCharIndex = charNameToID[name];
+  const yourCharInfo = lCharInfo[yourCharIndex];
+  if (!yourCharInfo) return;
+  YOUR_CHAR_NAME.textContent = yourCharInfo.name;
+  YOUR_CHAR_IMG_FRAME.value = yourCharInfo.name;
+  YOUR_CHAR_IMG.setAttribute("alt", yourCharInfo.name);
+  YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
+  loadGuessIcons();
+  GUESSES_DISPLAY.style.removeProperty("display");
+  PREPICKDIAPLAY.style.setProperty("display", "none", "important");
+  YOUARETEXT.innerText = YOUARETEXTDEFAULT
+  gameStarted = true
+}
 async function startGame() {
   // If the game is already loading, exit to avoid doubling up
   if (gameLoading)
     return;
+
   gameLoading = true;
   numImagesToLoadTotal = 0;
   updateLoadingPercent();
-
+   YOUR_CHAR_IMG.setAttribute("src", "");
+   YOUR_CHAR_IMG.setAttribute("alt", "");
+  GUESSES_DISPLAY.style.setProperty("display", "none", "important");
+  PREPICKDIAPLAY.style.removeProperty("display");
+  YOUR_CHAR_NAME.innerText = "";
+  YOUARETEXT.innerText = "Select a Character"
   document.querySelectorAll(".game-loading-message").forEach(el => el.classList.remove("hidden"));
-
-  loadGuessIcons();
+  gameStarted = false;
 
   // Load the selected character set
   const setDirName = MENU_CHARSET_SELECT.value;
@@ -714,14 +737,16 @@ async function startGame() {
   updateNumChars();
 
   // Randomly determine the player's character and set it up
-  yourCharIndex = Math.floor(Math.random() * getNumChars());
-  const yourCharInfo = lCharInfo[yourCharIndex];
-  YOUR_CHAR_NAME.textContent = yourCharInfo.name;
-  YOUR_CHAR_IMG_FRAME.value = yourCharInfo.name;
-  YOUR_CHAR_IMG.setAttribute("alt", yourCharInfo.name);
+  
+  //yourCharIndex = Math.floor(Math.random() * getNumChars());
+  //const yourCharInfo = lCharInfo[yourCharIndex];
+  //YOUR_CHAR_NAME.textContent = yourCharInfo.name;
+  //YOUR_CHAR_IMG_FRAME.value = yourCharInfo.name;
+  //YOUR_CHAR_IMG.setAttribute("alt", yourCharInfo.name);
 
   // Set the image to be scaled based on its natural size
-  ++numImagesLoading;
+  
+  /*++numImagesLoading;
   ++numImagesToLoadTotal;
   YOUR_CHAR_IMG.onload = () => {
     --numImagesLoading;
@@ -733,10 +758,11 @@ async function startGame() {
     // If it can't be loaded, leave it blank - better than hanging forever
     --numImagesLoading;
     updateLoadingPercent();
-  }
+  }*/
 
   // Start loading the image
-  YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
+  
+  //YOUR_CHAR_IMG.setAttribute("src", charsetPath + "/" + yourCharInfo.imgName);
 
   // Wait until all images are loaded before we switch to the game scene
   const interval = setInterval(() => {
@@ -1382,7 +1408,8 @@ async function loadCharacterSet(setDirName) {
   lAllChars.forEach((charInfo) => {
     if (charInfo === undefined)
       return;
-    lCharInfo.push(charInfo);
+
+    charNameToID[charInfo.name] = lCharInfo.push(charInfo)-1;
     const newCard = document.importNode(CHARACTER_CARD_TEMPLATE.content, true).querySelector(".character-card");
 
     newCard.querySelector(".character-img-frame").value = charInfo.name;
@@ -1414,6 +1441,7 @@ async function loadCharacterSet(setDirName) {
     inspectImgEl.setAttribute("src", charsetPath + "/" + charInfo.imgName);
 
     const frameEl = newCard.querySelector(".character-img-frame");
+    frameEl.setAttribute("charName", charInfo.name)
     let configDumped = null;
     if (charInfo.config) {
       configDumped = loadJSON(charsetPath + "/" + charInfo.config)
@@ -1428,8 +1456,14 @@ async function loadCharacterSet(setDirName) {
         });
     }
     frameEl.setAttribute("charsetPath", charsetPath + "/" + (charInfo.fullname || ""))
-    frameEl.addEventListener("click", flipCard);
+    let canClick = true
+    frameEl.addEventListener("click", (e) => { // just in case mobile doesn't have mousedown
+      if (canClick) {
+         flipCard(e);
+      }
+    });
     frameEl.addEventListener("dblclick", markCard);
+
     frameEl.addEventListener("mouseenter", (e) => {
       if (leftMouseHeld) {
         flipCard(e);
@@ -1438,6 +1472,12 @@ async function loadCharacterSet(setDirName) {
     frameEl.addEventListener("mousedown", (e) => {
       if (e.button == 1 || e.buttons == 4)
         toggleInspectCard(e);
+      if (e.button == 0) {
+        flipCard(e); 
+        leftMouseHeld = true;
+        canClick = false;
+        e.stopPropagation() 
+      }
     });
     frameEl.addEventListener("contextmenu", markCard, false);
     frameEl.addEventListener("wheel", (e) => {
@@ -1499,26 +1539,28 @@ function flipGuess(e) {
  */
 let currentSound = null;
 function handleConfigPress(frameEl, config) {
-  if (!config?.sounds?.length) return;
-  let charsetPath = frameEl.getAttribute("charsetPath")
+  if (!leftMouseHeld) {
+    if (config?.sounds?.length) {;
+      let charsetPath = frameEl.getAttribute("charsetPath")
 
-  const soundPath =
-    config.sounds[Math.floor(Math.random() * config.sounds.length)];
+      const soundPath =
+        config.sounds[Math.floor(Math.random() * config.sounds.length)];
 
-  if (currentSound) {
-    currentSound.pause();
-    currentSound.currentTime = 0;
+      if (currentSound) {
+        currentSound.pause();
+        currentSound.currentTime = 0;
+      }
+
+      currentSound = new Audio(charsetPath + "/" + soundPath);
+      currentSound.play().catch(console.error);
+    }
   }
-
-  currentSound = new Audio(charsetPath + "/" + soundPath);
-  currentSound.play().catch(console.error);
 }
 /**
  * Flips a card between active and inactive states
  * @param {Event} e 
  */
 function flipCard(e) {
-
   // Don't flip if we're in lookup mode
   if (lookupModeEnabled())
     return;
@@ -1526,6 +1568,15 @@ function flipCard(e) {
   let frameEl;
   if (!(frameEl = e.currentTarget || e.target))
     frameEl = e;
+
+  if (!gameStarted) {
+    e.preventDefault();
+    let config = charConfigs[frameEl.getAttribute("charsetPath")]
+    if (config) {
+      handleConfigPress(frameEl, config)
+    }
+    return SelectCharacter(frameEl.getAttribute("charName"))
+  }
   const cardClassList = frameEl.closest(".character-card").classList;
 
   let config = charConfigs[frameEl.getAttribute("charsetPath")]
@@ -2033,6 +2084,10 @@ const SETTINGS_SCENE_HEADER = document.getElementById("settings-scene");
 
 const SETTINGS_NAME_LINK = document.getElementById("settings-edit-name");
 const SETTINGS_GUESS_LABEL = document.getElementById("num-guesses-label");
+const GUESSES_DISPLAY = document.getElementById("guesses-display")
+const PREPICKDIAPLAY = document.getElementById("prePickDisplay")
+const YOUARETEXT = document.getElementById("above-name-text")
+const YOUARETEXTDEFAULT = YOUARETEXT.innerText
 const SETTINGS_GUESS_SELECT = document.getElementById("num-guesses-select");
 const SETTINGS_SCALE_LABEL = document.getElementById("card-scale-label");
 const SETTINGS_SCALE_SELECT = document.getElementById("card-scale-select");
@@ -2042,6 +2097,7 @@ const SETTINGS_REMEMBER_BOX = document.getElementById("remember-settings");
 const SETTINGS_RESTORE_DEFAULT_BUTTON = document.getElementById("settings-restore-default");
 const SETTINGS_RESTORE_INIT_BUTTON = document.getElementById("settings-restore-init");
 const SETTINGS_BACK_BUTTON = document.getElementById("settings-back");
+const RANDOMBUTTON = document.getElementById("random-button")
 
 const L_SETTINGS_OPTIONS = [SETTINGS_NAME_LINK, SETTINGS_GUESS_LABEL, SETTINGS_SCALE_LABEL, SETTINGS_REMEMBER_BOX,
   SETTINGS_RESTORE_DEFAULT_BUTTON, SETTINGS_RESTORE_INIT_BUTTON, SETTINGS_BACK_BUTTON];
@@ -2051,6 +2107,12 @@ const SETTINGS_EXAMPLE_CARD = document.getElementById("example-character-card");
 
 // Functions
 // ---------
+
+RANDOMBUTTON.addEventListener("click",function(e){
+  if (!gameStarted) {
+    SelectCharacter(lCharInfo[Math.floor(Math.random() * getNumChars())]?.name ?? "")
+  }
+})
 
 function initSettingsScene() {
   SETTINGS_NAME_LINK.focus({ focusVisible: true });
@@ -2215,9 +2277,13 @@ CREDITS_BACK_BUTTON.addEventListener("click", switchScene);
 const creditsSceneSwitchWatcher = new SceneSwitchWatcher(CREDITS_SCENE, initCreditsScene, exitCreditsScene);
 
 
+
 // Final setup
 // ===========
+
+
 window.onload = function () {
+  PREPICKDIAPLAY.style.setProperty("display", "none", "important");
   lSceneStack.push(MENU_SCENE);
 
   // Get the saved name, if any. If it's found in the cookie, set the "remember" boxes to be checked
